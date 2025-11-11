@@ -1,0 +1,491 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  FISH
+  REPTILE
+  RODENT
+  RABBIT
+  OTHER
+}
+
+enum AgeGroup {
+  PUPPY_KITTEN
+  ADULT
+  SENIOR
+}
+
+enum PetSize {
+  MINI
+  SMALL
+  MEDIUM
+  LARGE
+  GIANT
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  avatar_url    String?
+  phone         String?
+  
+  // Supabase Auth ID
+  auth_id       String    @unique
+  
+  // Loyalty Program
+  points        Int       @default(0)
+  tier          UserTier  @default(BRONZE)
+  
+  // Relations
+  addresses     Address[]
+  pets          Pet[]
+  orders        Order[]
+  reviews       Review[]
+  subscriptions Subscription[]
+  cart          CartItem[]
+  wishlist      WishlistItem[]
+  
+  // Timestamps
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime? // Soft delete
+  
+  // Performance indexes
+  @@index([email])
+  @@index([auth_id])
+  @@index([tier])
+  @@index([created_at])
+  @@map("users")
+}
+
+model Address {
+  id          String    @id @default(uuid())
+  
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  label       String?   // "Casa", "Oficina", etc
+  name        String
+  street      String
+  city        String
+  state       String?
+  zip_code    String
+  country     String    @default("España")
+  phone       String
+  
+  is_default  Boolean   @default(false)
+  
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  
+  @@index([user_id])
+  @@map("addresses")
+}
+
+// ============================================
+// PETS
+// ============================================
+
+model Pet {
+  id            String      @id @default(uuid())
+  user_id       String
+  user          User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  name          String
+  species       PetSpecies
+  breed         String?
+  birth_date    DateTime?
+  weight        Float?      // en kg
+  
+  // Health & Preferences
+  allergies     String[]    // array de alergenos
+  conditions    String[]    // condiciones médicas
+  diet_type     String?     // "natural", "veterinaria", "premium"
+  
+  photo_url     String?
+  is_active     Boolean     @default(true)
+  
+  // Timestamps
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  deleted_at    DateTime?   // Soft delete
+  
+  // Performance indexes
+  @@index([user_id])
+  @@index([species])
+  @@index([is_active])
+  @@index([created_at])
+  @@map("pets")
+}
+
+// ============================================
+// PRODUCTS & CATEGORIES
+// ============================================
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  logo        String?
+  description String?   @db.Text
+  website     String?
+  
+  products    Product[]
+  
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  
+  @@index([slug])
+  @@map("brands")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  icon        String?
+  image       String?
+  
+  parent_id   String?
+  parent      Category? @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  
+  products    Product[]
+  
+  order       Int       @default(0)
+  is_active   Boolean   @default(true)
+  
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  
+  @@index([parent_id])
+  @@index([slug])
+  @@map("categories")
+}
+
+model Product {
+  id                String        @id @default(uuid())
+  
+  // Basic Info
+  name              String
+  slug              String        @unique
+  description       String        @db.Text
+  short_description String?
+  
+  // Pricing
+  price             Float
+  compare_price     Float?        // precio tachado
+  cost              Float?        // costo para calcular margen
+  
+  // Inventory
+  sku               String        @unique
+  stock             Int           @default(0)
+  low_stock_alert   Int           @default(10)
+  
+  // Media
+  images            String[]      // URLs de Cloudinary
+  thumbnail         String?
+  
+  // Categorization
+  category_id       String
+  category          Category      @relation(fields: [category_id], references: [id])
+  brand_id          String?
+  brand             Brand?        @relation(fields: [brand_id], references: [id])
+  tags              String[]
+  
+  // Pet Specific
+  species           PetSpecies[]
+  age_group         AgeGroup[]
+  size_suitable     PetSize[]
+  
+  // Product Details
+  weight            Float?        // peso del producto en kg
+  dimensions        Json?         // {length, width, height}
+  ingredients       String?       @db.Text
+  nutritional_info  Json?
+  benefits          String[]
+  usage_instructions String?      @db.Text
+  
+  // SEO
+  meta_title        String?
+  meta_description  String?
+  
+  // Analytics
+  views_count       Int           @default(0)
+  sales_count       Int           @default(0)
+  rating_avg        Float         @default(0)
+  review_count      Int           @default(0)
+  
+  // Status
+  is_active         Boolean       @default(true)
+  is_featured       Boolean       @default(false)
+  is_subscription   Boolean       @default(false)
+  
+  // Relations
+  reviews           Review[]
+  order_items       OrderItem[]
+  cart_items        CartItem[]
+  wishlist_items    WishlistItem[]
+  subscriptions     Subscription[]
+  
+  // Timestamps
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+  deleted_at        DateTime?     // Soft delete
+  
+  // Performance indexes
+  @@index([category_id])
+  @@index([brand_id])
+  @@index([slug])
+  @@index([is_active])
+  @@index([is_featured])
+  @@index([price])
+  @@index([stock])
+  @@index([rating_avg])
+  @@index([sales_count])
+  @@index([created_at])
+  @@index([name]) // Full-text search
+  @@map("products")
+}
+
+// ============================================
+// CART & WISHLIST
+// ============================================
+
+model CartItem {
+  id          String    @id @default(uuid())
+  
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  product_id  String
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  
+  quantity    Int       @default(1)
+  price       Float     // precio al momento de agregar
+  
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  
+  @@unique([user_id, product_id])
+  @@index([user_id])
+  @@map("cart_items")
+}
+
+model WishlistItem {
+  id          String   @id @default(uuid())
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  product_id  String
+  product     Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  created_at  DateTime @default(now())
+  
+  // Performance indexes
+  @@unique([user_id, product_id])
+  @@index([user_id])
+  @@index([product_id])
+  @@index([created_at])
+  @@map("wishlist_items")
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id              String      @id @default(uuid())
+  order_number    String      @unique // formato: MSC-20250110-001
+  
+  user_id         String
+  user            User        @relation(fields: [user_id], references: [id])
+  
+  // Pricing
+  subtotal        Float
+  shipping_cost   Float
+  discount        Float       @default(0)
+  tax             Float       @default(0)
+  total           Float
+  
+  // Shipping
+  shipping_address Json       // {name, street, city, zip, phone}
+  tracking_number  String?
+  
+  // Status
+  status          OrderStatus @default(PENDING)
+  payment_status  PaymentStatus @default(PENDING)
+  
+  // Payment
+  stripe_payment_id String?   @unique
+  payment_method    String?
+  
+  // Notes
+  customer_notes  String?
+  admin_notes     String?     @db.Text
+  
+  // Relations
+  items           OrderItem[]
+  
+  shipped_at      DateTime?
+  delivered_at    DateTime?
+  cancelled_at    DateTime?
+  
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  
+  @@index([user_id])
+  @@index([status])
+  @@index([order_number])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String    @id @default(uuid())
+  
+  order_id    String
+  order       Order     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  
+  product_id  String
+  product     Product   @relation(fields: [product_id], references: [id])
+  
+  product_name String   // snapshot del nombre
+  quantity    Int
+  price       Float     // precio al momento de compra
+  
+  created_at  DateTime  @default(now())
+  
+  @@index([order_id])
+  @@map("order_items")
+}
+
+// ============================================
+// REVIEWS
+// ============================================
+
+model Review {
+  id          String    @id @default(uuid())
+  
+  user_id     String
+  user        User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  product_id  String
+  product     Product   @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  
+  order_id    String?   // para verificar compra
+  
+  rating      Int       // 1-5
+  title       String?
+  comment     String    @db.Text
+  photos      String[]  // URLs de fotos subidas
+  
+  is_verified Boolean   @default(false)
+  is_visible  Boolean   @default(true)
+  
+  helpful_count Int     @default(0)
+  
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  
+  @@unique([user_id, product_id]) // 1 review por usuario por producto
+  @@index([product_id])
+  @@index([user_id])
+  @@map("reviews")
+}
+
+// ============================================
+// SUBSCRIPTIONS
+// ============================================
+
+model Subscription {
+  id                String    @id @default(uuid())
+  
+  user_id           String
+  user              User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  product_id        String
+  product           Product   @relation(fields: [product_id], references: [id])
+  
+  quantity          Int       @default(1)
+  frequency_days    Int       // cada X días (14, 28, 42, 56)
+  discount_percent  Float     @default(10)
+  
+  // Stripe Subscription
+  stripe_subscription_id String? @unique
+  
+  // Status
+  status            SubscriptionStatus @default(ACTIVE)
+  
+  next_delivery     DateTime
+  last_delivery     DateTime?
+  
+  paused_at         DateTime?
+  cancelled_at      DateTime?
+  
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+  
+  @@index([user_id])
+  @@index([status])
+  @@map("subscriptions")
+}
