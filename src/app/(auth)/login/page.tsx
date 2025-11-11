@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,12 +20,12 @@ import { Loader2, LogIn, Mail, Lock } from 'lucide-react'
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'La contraseña es requerida'),
-  remember: z.boolean().default(false),
+  remember: z.boolean(),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/cuenta'
@@ -269,5 +269,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="container max-w-md mx-auto py-20"><Card><CardContent className="p-6 text-center">Cargando...</CardContent></Card></div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

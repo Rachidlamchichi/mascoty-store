@@ -9,6 +9,57 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string
+          auth_id: string
+          email: string
+          name: string | null
+          phone: string | null
+          avatar_url: string | null
+          role: string
+          loyalty_tier: string
+          loyalty_points: number
+          email_notifications: boolean
+          sms_notifications: boolean
+          marketing_emails: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_id: string
+          email: string
+          name?: string | null
+          phone?: string | null
+          avatar_url?: string | null
+          role?: string
+          loyalty_tier?: string
+          loyalty_points?: number
+          email_notifications?: boolean
+          sms_notifications?: boolean
+          marketing_emails?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_id?: string
+          email?: string
+          name?: string | null
+          phone?: string | null
+          avatar_url?: string | null
+          role?: string
+          loyalty_tier?: string
+          loyalty_points?: number
+          email_notifications?: boolean
+          sms_notifications?: boolean
+          marketing_emails?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
