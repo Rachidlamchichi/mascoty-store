@@ -20,7 +20,7 @@ import { Loader2, LogIn, Mail, Lock } from 'lucide-react'
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'La contraseña es requerida'),
-  remember: z.boolean(),
+  remember: z.boolean().optional(),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
