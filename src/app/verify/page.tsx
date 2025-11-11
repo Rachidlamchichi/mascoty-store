@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +11,7 @@ export default async function VerifyPage() {
   let supabaseStatus = { connected: false, error: null as string | null };
   
   try {
-    const supabase = await createClient();
+    const supabase = createServerClient();
     const { error } = await supabase
       .from('categories')
       .select('id')

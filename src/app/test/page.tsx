@@ -1,11 +1,11 @@
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TestPage() {
-  const supabase = await createClient();
+  const supabase = createServerClient();
   
   // Test 1: Check connection
   const { data: { user } } = await supabase.auth.getUser();
